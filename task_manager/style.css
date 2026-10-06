@@ -104,7 +104,12 @@ h1 {
     background: #2A3D63;
 }
 
-
+.btn-cancel {
+    align-self: center;
+    color: var(--ink-soft);
+    font-size: 14px;
+    text-decoration: none;
+}
 
 .btn-cancel:hover {
     color: var(--ink);
