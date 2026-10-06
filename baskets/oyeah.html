@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBA Bet Simulator</title>
+  <style>
+    /* ── Reset & Variables ───────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0c1220;
+      --surface:   #131d2f;
+      --card:      #182338;
+      --card-hover:#1e2d48;
+      --border:    #263354;
+      --primary:   #3b82f6;
+      --primary-h: #2563eb;
+      --green:     #22c55e;
+      --green-h:   #16a34a;
+      --gold:      #eab308;
+      --red:       #ef4444;
+      --red-h:     #dc2626;
+      --orange:    #f97316;
+      --text:      #e8edf5;
+      --muted:     #7c8db5;
+      --radius:    10px;
+      --shadow:    0 4px 20px rgba(0,0,0,.3);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Header ──────────────────────────────────────── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .header .logo span { color: var(--gold); }
+
+    .header .balance-display {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .balance-chip {
+      background: linear-gradient(135deg, #164e1a, #0d3311);
+      border: 1px solid #22c55e44;
+      padding: 8px 18px;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .header-btn:hover { background: var(--card-hover); border-color: var(--primary); }
+    .header-btn.add-funds { color: var(--green); border-color: var(--green); }
+    .header-btn.add-funds:hover { background: #22c55e22; }
+
+    /* ── Navigation ──────────────────────────────────── */
+    .nav {
+      display: flex;
+      gap: 4px;
+      padding: 12px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav button {
+      padding: 10px 20px;
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .nav button:hover { color: var(--text); background: var(--card); }
+    .nav button.active { color: var(--primary); background: #3b82f622; }
+
+    /* ── Main Content ────────────────────────────────── */
+    .main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn .3s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Dashboard ────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .stat-card .label {
+      font-size: .8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .stat-card .value.green { color: var(--green); }
+    .stat-card .value.red { color: var(--red); }
+    .stat-card .value.gold { color: var(--gold); }
+    .stat-card .value.blue { color: var(--primary); }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Date Navigation ─────────────────────────────── */
+    .date-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .date-nav button {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .date-nav button:hover { background: var(--primary); border-color: var(--primary); }
+
+    .date-nav .date-label {
+      font-size: 1rem;
+      font-weight: 600;
+      min-width: 200px;
+      text-align: center;
+    }
+
+    .date-nav .date-label small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+
+    /* ── Filter Pills ────────────────────────────────── */
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pills button {
+      padding: 6px 16px;
+      font-size: .8rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      background: var(--card);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .filter-pills button.active { color: var(--primary); border-color: var(--primary); background: #3b82f618; }
+    .filter-pills button:hover:not(.active) { color: var(--text); border-color: var(--muted); }
+
+    /* ── Game Cards ───────────────────────────────────── */
+    .games-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .game-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all .2s;
+    }
+    .game-card:hover { border-color: var(--primary); background: var(--card-hover); }
+
+    .game-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 14px;
+    }
+
+    .game-status.live { color: var(--red); }
+    .game-status.live::before {
+      content: '';
+      width: 8px; height: 8px;
+      background: var(--red);
+      border-radius: 50%;
+      animation: pulse 1.5s ease infinite;
+    }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+    .game-status.final { color: var(--muted); }
+    .game-status.upcoming { color: var(--primary); }
+
+    .game-teams {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .team-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .team-row img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+    }
+
+    .team-row .team-name {
+      flex: 1;
+      font-weight: 600;
+      font-size: .95rem;
+    }
+
+    .team-row .team-record {
+      color: var(--muted);
+      font-size: .8rem;
+      margin-left: 4px;
+    }
+
+    .team-row .team-score {
+      font-size: 1.2rem;
+      font-weight: 800;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .team-row.winner .team-name,
+    .team-row.winner .team-score { color: var(--green); }
+
+    .game-odds {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .odds-btn {
+      flex: 1;
+      min-width: 120px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+    }
+    .odds-btn:hover { border-color: var(--primary); background: #3b82f612; }
+    .odds-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .odds-btn:disabled:hover { border-color: var(--border); background: var(--surface); }
+
+    .odds-btn .odds-label {
+      font-size: .7rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .odds-btn .odds-value {
+      font-size: .9rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    /* ── Bet Modal ────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      z-index: 200;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 460px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modalIn .25s ease;
+    }
+
+    @keyframes modalIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 { font-size: 1.1rem; }
+    .modal-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 1.4rem; cursor: pointer; padding: 4px;
+      transition: color .2s;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body { padding: 22px; }
+
+    .modal-game-info {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-game-info .vs-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 6px;
+    }
+
+    .modal-game-info .vs-team {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .modal-game-info .vs-team img { width: 40px; height: 40px; }
+    .modal-game-info .vs-team span { font-weight: 600; font-size: .85rem; }
+    .modal-game-info .vs-at { color: var(--muted); font-weight: 700; font-size: .85rem; }
+
+    .bet-type-selector {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .bet-type-selector button {
+      flex: 1;
+      padding: 10px;
+      font-size: .82rem;
+      font-weight: 600;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .bet-type-selector button.active { color: var(--primary); border-color: var(--primary); background: #3b82f618; }
+
+    .selection-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .sel-btn {
+      flex: 1;
+      padding: 14px;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      cursor: pointer;
+      text-align: center;
+      transition: all .2s;
+    }
+    .sel-btn:hover { border-color: var(--primary); }
+    .sel-btn.selected { border-color: var(--primary); background: #3b82f618; }
+    .sel-btn .sel-label { font-size: .8rem; color: var(--muted); display: block; margin-bottom: 4px; }
+    .sel-btn .sel-odds { font-size: 1.1rem; font-weight: 700; color: var(--green); }
+
+    .amount-section { margin-bottom: 18px; }
+    .amount-section label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .amount-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .amount-input-row input {
+      flex: 1;
+      padding: 12px 16px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .amount-input-row input:focus { border-color: var(--primary); }
+
+    .quick-amounts {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .quick-amounts button {
+      padding: 6px 14px;
+      font-size: .8rem;
+      font-weight: 600;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .quick-amounts button:hover { color: var(--text); border-color: var(--primary); }
+
+    .payout-display {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .payout-display .payout-label { font-size: .85rem; color: var(--muted); }
+    .payout-display .payout-value { font-size: 1.2rem; font-weight: 800; color: var(--green); }
+
+    .place-bet-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, var(--green), var(--green-h));
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .place-bet-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px #22c55e44; }
+    .place-bet-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── Bet Cards (My Bets) ─────────────────────────── */
+    .bet-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+
+    .bet-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .bet-badge {
+      padding: 4px 10px;
+      border-radius: 50px;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .bet-badge.active { background: #3b82f622; color: var(--primary); }
+    .bet-badge.won { background: #22c55e22; color: var(--green); }
+    .bet-badge.lost { background: #ef444422; color: var(--red); }
+
+    .bet-card .bet-matchup { font-weight: 600; margin-bottom: 6px; }
+    .bet-card .bet-details { font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+    .bet-card .bet-amounts {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .bet-card .bet-amounts span { font-size: .85rem; }
+    .bet-card .bet-amounts .wager { color: var(--muted); }
+    .bet-card .bet-amounts .payout { font-weight: 700; color: var(--green); }
+
+    /* ── Toast ────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      font-size: .9rem;
+      font-weight: 600;
+      color: #fff;
+      box-shadow: var(--shadow);
+      animation: toastIn .3s ease;
+      max-width: 360px;
+    }
+    .toast.success { background: linear-gradient(135deg, #16a34a, #15803d); }
+    .toast.error   { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+    .toast.info    { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+    .toast.warn    { background: linear-gradient(135deg, #d97706, #b45309); }
+
+    .toast.removing { animation: toastOut .3s ease forwards; }
+
+    @keyframes toastIn  { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes toastOut { to   { opacity: 0; transform: translateX(40px); } }
+
+    /* ── Empty / Loading ─────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: .95rem; line-height: 1.5; }
+
+    .loading-spinner {
+      text-align: center;
+      padding: 60px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .loading-spinner::before {
+      content: '';
+      display: block;
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .refresh-note {
+      text-align: center;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 20px;
+    }
+
+    /* ── Add Funds Modal ─────────────────────────────── */
+    .funds-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .funds-grid button {
+      padding: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--green);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .funds-grid button:hover { border-color: var(--green); background: #22c55e12; }
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media (max-width: 600px) {
+      .header { padding: 12px 16px; }
+      .nav { padding: 8px 16px; overflow-x: auto; }
+      .main { padding: 16px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .selection-buttons { flex-direction: column; }
+      .game-odds { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ───────────────────────────────────── -->
+  <div class="header">
+    <div class="logo">🏀 NBA <span>BET SIM</span></div>
+    <div class="balance-display">
+      <div class="balance-chip">💰 <span id="headerBalance">$1,000.00</span></div>
+      <button class="header-btn add-funds" onclick="openFundsModal()">+ Add Funds</button>
+      <button class="header-btn" onclick="refreshGames()">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <!-- ── Navigation ───────────────────────────────── -->
+  <div class="nav">
+    <button class="active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+    <button data-tab="games" onclick="switchTab('games')">🏀 Games</button>
+    <button data-tab="bets" onclick="switchTab('bets')">🎫 My Bets</button>
+  </div>
+
+  <!-- ── Main Content ─────────────────────────────── -->
+  <div class="main">
+
+    <!-- Dashboard Tab -->
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="section-title">📋 Recent Bets</div>
+      <div id="recentBets"></div>
+    </div>
+
+    <!-- Games Tab -->
+    <div class="tab-content" id="tab-games">
+      <div class="date-nav">
+        <button onclick="changeDate(-1)">◀</button>
+        <div class="date-label" id="dateLabel"></div>
+        <button onclick="changeDate(1)">▶</button>
+      </div>
+      <div class="filter-pills" id="gameFilters">
+        <button class="active" data-filter="all" onclick="setGameFilter('all')">All</button>
+        <button data-filter="live" onclick="setGameFilter('live')">🔴 Live</button>
+        <button data-filter="upcoming" onclick="setGameFilter('upcoming')">Upcoming</button>
+        <button data-filter="final" onclick="setGameFilter('final')">Final</button>
+      </div>
+      <div class="games-grid" id="gamesGrid"></div>
+      <div class="refresh-note" id="refreshNote"></div>
+    </div>
+
+    <!-- My Bets Tab -->
+    <div class="tab-content" id="tab-bets">
+      <div class="filter-pills" id="betFilters">
+        <button class="active" data-filter="all" onclick="setBetFilter('all')">All</button>
+        <button data-filter="active" onclick="setBetFilter('active')">🟡 Active</button>
+        <button data-filter="won" onclick="setBetFilter('won')">🟢 Won</button>
+        <button data-filter="lost" onclick="setBetFilter('lost')">🔴 Lost</button>
+      </div>
+      <div id="betsList"></div>
+    </div>
+  </div>
+
+  <!-- ── Bet Modal ────────────────────────────────── -->
+  <div class="modal-overlay" id="betModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>🎫 Place Bet</h2>
+        <button class="modal-close" onclick="closeBetModal()">✕</button>
+      </div>
+      <div class="modal-body" id="betModalBody"></div>
+    </div>
+  </div>
+
+  <!-- ── Add Funds Modal ─────────────────────────── -->
+  <div class="modal-overlay" id="fundsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>💰 Add Funds</h2>
+        <button class="modal-close" onclick="closeFundsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted); margin-bottom:16px; font-size:.9rem;">
+          This is a simulator — add as much fake money as you like!
+        </p>
+        <div class="funds-grid">
+          <button onclick="addFunds(500)">+$500</button>
+          <button onclick="addFunds(1000)">+$1,000</button>
+          <button onclick="addFunds(5000)">+$5,000</button>
+          <button onclick="addFunds(10000)">+$10,000</button>
+          <button onclick="addFunds(50000)">+$50,000</button>
+          <button onclick="addFunds(100000)">+$100,000</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toasts ───────────────────────────────────── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+
+  <script>
+  /* ================================================================
+     NBA BET SIMULATOR — Full Client-Side Betting Engine
+     Real-time data from ESPN public API
+     ================================================================ */
+
+  // ── State ──────────────────────────────────────────────
+  const DEFAULT_STATE = {
+    balance: 1000,
+    bets: [],
+    stats: { totalBets: 0, wins: 0, losses: 0, totalWagered: 0, totalWon: 0 }
+  };
+
+  let state   = loadState();
+  let games   = [];
+  let currentDate  = new Date();
+  let gameFilter   = 'all';
+  let betFilter    = 'all';
+  let currentBet   = { gameId: null, type: 'moneyline', selection: null, odds: 0, amount: 0 };
+  let autoRefreshId = null;
+
+  // ── Persistence ────────────────────────────────────────
+  function loadState() {
+    try {
+      const s = JSON.parse(localStorage.getItem('nbaBetSim'));
+      return s && s.balance !== undefined ? s : { ...DEFAULT_STATE };
+    } catch { return { ...DEFAULT_STATE }; }
+  }
+  function saveState() {
+    localStorage.setItem('nbaBetSim', JSON.stringify(state));
+    updateBalanceDisplay();
+  }
+
+  // ── ESPN API ───────────────────────────────────────────
+  const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
+
+  async function fetchGames(date) {
+    const d = date || currentDate;
+    const dateStr = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+
+    try {
+      const res = await fetch(`${ESPN_BASE}?dates=${dateStr}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      games = parseGames(data);
+      settleBets();
+      renderGames();
+      renderDashboard();
+      renderBets();
+      updateRefreshNote();
+    } catch (err) {
+      console.error('Failed to fetch games:', err);
+      showToast('Could not load games. Check your connection and try again.', 'error');
+      games = [];
+      renderGames();
+    }
+  }
+
+  function parseGames(data) {
+    if (!data.events) return [];
+    return data.events.map(ev => {
+      const comp = ev.competitions[0];
+      const home = comp.competitors.find(c => c.homeAway === 'home');
+      const away = comp.competitors.find(c => c.homeAway === 'away');
+      const odds = comp.odds?.[0];
+
+      const homeRecord = home.records?.find(r => r.name === 'overall')?.summary || '';
+      const awayRecord = away.records?.find(r => r.name === 'overall')?.summary || '';
+
+      return {
+        id: ev.id,
+        name: ev.name,
+        shortName: ev.shortName,
+        date: ev.date,
+        status: {
+          state: ev.status.type.state,       // pre | in | post
+          completed: ev.status.type.completed,
+          detail: ev.status.type.shortDetail || ev.status.type.detail,
+          clock: ev.status.displayClock,
+          period: ev.status.period
+        },
+        home: {
+          name: home.team.displayName,
+          short: home.team.shortDisplayName,
+          abbrev: home.team.abbreviation,
+          logo: home.team.logo,
+          score: parseInt(home.score) || 0,
+          record: homeRecord,
+          winner: home.winner
+        },
+        away: {
+          name: away.team.displayName,
+          short: away.team.shortDisplayName,
+          abbrev: away.team.abbreviation,
+          logo: away.team.logo,
+          score: parseInt(away.score) || 0,
+          record: awayRecord,
+          winner: away.winner
+        },
+        odds: parseOdds(odds),
+        broadcast: comp.broadcasts?.[0]?.names?.[0] || ''
+      };
+    });
+  }
+
+  function parseOdds(apiOdds) {
+    if (apiOdds && (apiOdds.homeTeamOdds?.moneyLine || apiOdds.awayTeamOdds?.moneyLine)) {
+      return {
+        spread: apiOdds.spread || 0,
+        overUnder: apiOdds.overUnder || 0,
+        homeML: apiOdds.homeTeamOdds?.moneyLine || -110,
+        awayML: apiOdds.awayTeamOdds?.moneyLine || -110,
+        generated: false
+      };
+    }
+    return generateOdds();
+  }
+
+  function generateOdds() {
+    // Generate realistic NBA odds
+    const spreadVal = Math.round((Math.random() * 14 - 4) * 2) / 2; // -4 to +10
+    const ou = Math.round((210 + Math.random() * 30) * 2) / 2;
+    let homeML, awayML;
+
+    if (spreadVal <= 0) {
+      // Home is slight underdog or pick'em
+      homeML = Math.round(100 + Math.abs(spreadVal) * 22 + Math.random() * 15);
+      awayML = -Math.round(110 + Math.abs(spreadVal) * 20 + Math.random() * 15);
+    } else {
+      homeML = -Math.round(110 + spreadVal * 20 + Math.random() * 15);
+      awayML = Math.round(100 + spreadVal * 22 + Math.random() * 15);
+    }
+
+    return { spread: -spreadVal, overUnder: ou, homeML, awayML, generated: true };
+  }
+
+  // ── Betting Logic ──────────────────────────────────────
+  function calculatePayout(amount, odds) {
+    if (odds > 0) return amount + (amount * odds / 100);
+    return amount + (amount * 100 / Math.abs(odds));
+  }
+
+  function formatOdds(odds) {
+    return odds > 0 ? `+${odds}` : `${odds}`;
+  }
+
+  function placeBet() {
+    const game = games.find(g => g.id === currentBet.gameId);
+    if (!game) return;
+
+    const amt = parseFloat(currentBet.amount);
+    if (!amt || amt <= 0) return showToast('Enter a valid bet amount.', 'error');
+    if (amt > state.balance) return showToast('Insufficient balance!', 'error');
+    if (!currentBet.selection) return showToast('Select your pick first.', 'error');
+    if (game.status.completed) return showToast('This game has already ended.', 'error');
+
+    const payout = calculatePayout(amt, currentBet.odds);
+
+    const bet = {
+      id: Date.now(),
+      gameId: game.id,
+      matchup: game.shortName || game.name,
+      type: currentBet.type,
+      selection: currentBet.selection,
+      selectionLabel: currentBet.selectionLabel || currentBet.selection,
+      odds: currentBet.odds,
+      amount: amt,
+      potentialPayout: Math.round(payout * 100) / 100,
+      status: 'active',
+      placedAt: new Date().toISOString(),
+      gameOdds: { ...game.odds }
+    };
+
+    state.balance = Math.round((state.balance - amt) * 100) / 100;
+    state.bets.unshift(bet);
+    state.stats.totalBets++;
+    state.stats.totalWagered = Math.round((state.stats.totalWagered + amt) * 100) / 100;
+    saveState();
+
+    closeBetModal();
+    showToast(`Bet placed! $${amt.toFixed(2)} on ${bet.selectionLabel}`, 'success');
+    renderDashboard();
+    renderBets();
+  }
+
+  function settleBets() {
+    let settled = false;
+    state.bets.forEach(bet => {
+      if (bet.status !== 'active') return;
+
+      const game = games.find(g => g.id === bet.gameId);
+      if (!game || !game.status.completed) return;
+
+      const hs = game.home.score;
+      const as = game.away.score;
+      let won = false;
+
+      switch (bet.type) {
+        case 'moneyline':
+          won = bet.selection === 'home' ? hs > as : as > hs;
+          break;
+        case 'spread': {
+          const spread = bet.gameOdds?.spread || game.odds.spread;
+          if (bet.selection === 'home') won = (hs + spread) > as;
+          else won = as > (hs + spread);
+          break;
+        }
+        case 'over_under':
+          if (bet.selection === 'over') won = (hs + as) > (bet.gameOdds?.overUnder || game.odds.overUnder);
+          else won = (hs + as) < (bet.gameOdds?.overUnder || game.odds.overUnder);
+          break;
+      }
+
+      if (won) {
+        bet.status = 'won';
+        state.balance = Math.round((state.balance + bet.potentialPayout) * 100) / 100;
+        state.stats.wins++;
+        state.stats.totalWon = Math.round((state.stats.totalWon + bet.potentialPayout) * 100) / 100;
+        showToast(`🎉 You won $${bet.potentialPayout.toFixed(2)} on ${bet.selectionLabel}!`, 'success');
+      } else {
+        bet.status = 'lost';
+        state.stats.losses++;
+        showToast(`😞 Bet lost: ${bet.selectionLabel}`, 'error');
+      }
+      settled = true;
+    });
+
+    if (settled) saveState();
+  }
+
+  // ── Rendering ──────────────────────────────────────────
+
+  function updateBalanceDisplay() {
+    document.getElementById('headerBalance').textContent = formatCurrency(state.balance);
+  }
+
+  function renderDashboard() {
+    const s = state.stats;
+    const profit = Math.round((state.stats.totalWon - state.stats.totalWagered) * 100) / 100;
+    const winRate = s.totalBets > 0 ? ((s.wins / s.totalBets) * 100).toFixed(1) : '0.0';
+    const activeBets = state.bets.filter(b => b.status === 'active');
+
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card">
+        <div class="label">Balance</div>
+        <div class="value green">${formatCurrency(state.balance)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Bets</div>
+        <div class="value blue">${s.totalBets}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Win Rate</div>
+        <div class="value gold">${winRate}%</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Profit / Loss</div>
+        <div class="value ${profit >= 0 ? 'green' : 'red'}">${profit >= 0 ? '+' : ''}${formatCurrency(profit)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Active Bets</div>
+        <div class="value blue">${activeBets.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Record (W-L)</div>
+        <div class="value">${s.wins}-${s.losses}</div>
+      </div>
+    `;
+
+    const recent = state.bets.slice(0, 5);
+    if (recent.length === 0) {
+      document.getElementById('recentBets').innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🎫</div>
+          <p>No bets placed yet.<br>Head to the Games tab to start betting!</p>
+        </div>`;
+    } else {
+      document.getElementById('recentBets').innerHTML = recent.map(b => renderBetCard(b)).join('');
+    }
+  }
+
+  function renderGames() {
+    updateDateLabel();
+
+    const filtered = games.filter(g => {
+      if (gameFilter === 'live')     return g.status.state === 'in';
+      if (gameFilter === 'upcoming') return g.status.state === 'pre';
+      if (gameFilter === 'final')    return g.status.state === 'post';
+      return true;
+    });
+
+    const grid = document.getElementById('gamesGrid');
+
+    if (games.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🏀</div>
+          <p>No games scheduled for this date.<br>Try navigating to another day.</p>
+        </div>`;
+      return;
+    }
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          <p>No ${gameFilter} games right now.</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(g => {
+      const statusClass = g.status.state === 'in' ? 'live' : g.status.state === 'post' ? 'final' : 'upcoming';
+      const showScores = g.status.state !== 'pre';
+      const gameTime = g.status.state === 'pre'
+        ? new Date(g.date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+        : g.status.detail;
+
+      const canBet = !g.status.completed;
+      const spreadLabel = g.odds.spread >= 0
+        ? `${g.home.abbrev} +${g.odds.spread}`
+        : `${g.home.abbrev} ${g.odds.spread}`;
+
+      return `
+        <div class="game-card">
+          <div class="game-status ${statusClass}">
+            ${statusClass === 'live' ? '' : ''}${gameTime}
+            ${g.broadcast ? `<span style="margin-left:8px; color:var(--muted); font-weight:400;">📺 ${g.broadcast}</span>` : ''}
+          </div>
+
+          <div class="game-teams">
+            <div class="team-row ${g.away.winner ? 'winner' : ''}">
+              <img src="${g.away.logo}" alt="${g.away.abbrev}" onerror="this.style.display='none'"/>
+              <span class="team-name">
+                ${g.away.name}
+                ${g.away.record ? `<span class="team-record">(${g.away.record})</span>` : ''}
+              </span>
+              ${showScores ? `<span class="team-score">${g.away.score}</span>` : ''}
+            </div>
+            <div class="team-row ${g.home.winner ? 'winner' : ''}">
+              <img src="${g.home.logo}" alt="${g.home.abbrev}" onerror="this.style.display='none'"/>
+              <span class="team-name">
+                ${g.home.name}
+                ${g.home.record ? `<span class="team-record">(${g.home.record})</span>` : ''}
+              </span>
+              ${showScores ? `<span class="team-score">${g.home.score}</span>` : ''}
+            </div>
+          </div>
+
+          <div class="game-odds">
+            <button class="odds-btn" onclick="openBetModal('${g.id}','moneyline','away')" ${canBet ? '' : 'disabled'}>
+              <span class="odds-label">${g.away.abbrev} ML</span>
+              <span class="odds-value">${formatOdds(g.odds.awayML)}</span>
+            </button>
+            <button class="odds-btn" onclick="openBetModal('${g.id}','moneyline','home')" ${canBet ? '' : 'disabled'}>
+              <span class="odds-label">${g.home.abbrev} ML</span>
+              <span class="odds-value">${formatOdds(g.odds.homeML)}</span>
+            </button>
+            <button class="odds-btn" onclick="openBetModal('${g.id}','spread','home')" ${canBet ? '' : 'disabled'}>
+              <span class="odds-label">Spread</span>
+              <span class="odds-value">${spreadLabel}</span>
+            </button>
+            <button class="odds-btn" onclick="openBetModal('${g.id}','over_under','over')" ${canBet ? '' : 'disabled'}>
+              <span class="odds-label">O/U</span>
+              <span class="odds-value">${g.odds.overUnder}</span>
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderBets() {
+    const filtered = state.bets.filter(b => {
+      if (betFilter === 'active') return b.status === 'active';
+      if (betFilter === 'won')    return b.status === 'won';
+      if (betFilter === 'lost')   return b.status === 'lost';
+      return true;
+    });
+
+    const container = document.getElementById('betsList');
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🎫</div>
+          <p>${betFilter === 'all' ? 'No bets placed yet.' : `No ${betFilter} bets.`}</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(b => renderBetCard(b)).join('');
+  }
+
+  function renderBetCard(bet) {
+    const typeLabels = { moneyline: 'Moneyline', spread: 'Spread', over_under: 'Over/Under' };
+    const dateStr = new Date(bet.placedAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return `
+      <div class="bet-card">
+        <div class="bet-card-header">
+          <span class="bet-badge ${bet.status}">${bet.status.toUpperCase()}</span>
+          <span style="font-size:.8rem; color:var(--muted);">${dateStr}</span>
+        </div>
+        <div class="bet-matchup">${bet.matchup}</div>
+        <div class="bet-details">${typeLabels[bet.type] || bet.type} — ${bet.selectionLabel} (${formatOdds(bet.odds)})</div>
+        <div class="bet-amounts">
+          <span class="wager">Wager: $${bet.amount.toFixed(2)}</span>
+          <span class="payout" style="color:${bet.status === 'lost' ? 'var(--red)' : 'var(--green)'};">
+            ${bet.status === 'lost' ? '-$' + bet.amount.toFixed(2) : 'Payout: $' + bet.potentialPayout.toFixed(2)}
+          </span>
+        </div>
+      </div>`;
+  }
+
+  // ── Bet Modal Logic ────────────────────────────────────
+
+  function openBetModal(gameId, type, selection) {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+
+    currentBet = { gameId, type, selection: null, odds: 0, amount: 0 };
+    document.getElementById('betModal').classList.add('open');
+
+    renderBetModalContent(game, type, selection);
+  }
+
+  function renderBetModalContent(game, activeType, preselect) {
+    const body = document.getElementById('betModalBody');
+
+    // Build selection buttons based on bet type
+    let selectionsHTML = '';
+    let activeOdds = {};
+
+    if (activeType === 'moneyline') {
+      activeOdds = { home: game.odds.homeML, away: game.odds.awayML };
+      selectionsHTML = `
+        <div class="selection-buttons">
+          <div class="sel-btn ${preselect === 'away' ? 'selected' : ''}" onclick="selectBet('away', ${game.odds.awayML}, '${game.away.name} ML')">
+            <span class="sel-label">${game.away.abbrev}</span>
+            <span class="sel-odds">${formatOdds(game.odds.awayML)}</span>
+          </div>
+          <div class="sel-btn ${preselect === 'home' ? 'selected' : ''}" onclick="selectBet('home', ${game.odds.homeML}, '${game.home.name} ML')">
+            <span class="sel-label">${game.home.abbrev}</span>
+            <span class="sel-odds">${formatOdds(game.odds.homeML)}</span>
+          </div>
+        </div>`;
+    } else if (activeType === 'spread') {
+      const awaySpread = game.odds.spread >= 0 ? -game.odds.spread : Math.abs(game.odds.spread);
+      const homeSpreadLabel = game.odds.spread >= 0 ? `+${game.odds.spread}` : `${game.odds.spread}`;
+      const awaySpreadLabel = awaySpread >= 0 ? `+${awaySpread}` : `${awaySpread}`;
+      activeOdds = { home: -110, away: -110 };
+      selectionsHTML = `
+        <div class="selection-buttons">
+          <div class="sel-btn ${preselect === 'away' ? 'selected' : ''}" onclick="selectBet('away', -110, '${game.away.abbrev} ${awaySpreadLabel}')">
+            <span class="sel-label">${game.away.abbrev} ${awaySpreadLabel}</span>
+            <span class="sel-odds">-110</span>
+          </div>
+          <div class="sel-btn ${preselect === 'home' ? 'selected' : ''}" onclick="selectBet('home', -110, '${game.home.abbrev} ${homeSpreadLabel}')">
+            <span class="sel-label">${game.home.abbrev} ${homeSpreadLabel}</span>
+            <span class="sel-odds">-110</span>
+          </div>
+        </div>`;
+    } else {
+      activeOdds = { over: -110, under: -110 };
+      selectionsHTML = `
+        <div class="selection-buttons">
+          <div class="sel-btn ${preselect === 'over' ? 'selected' : ''}" onclick="selectBet('over', -110, 'Over ${game.odds.overUnder}')">
+            <span class="sel-label">Over ${game.odds.overUnder}</span>
+            <span class="sel-odds">-110</span>
+          </div>
+          <div class="sel-btn ${preselect === 'under' ? 'selected' : ''}" onclick="selectBet('under', -110, 'Under ${game.odds.overUnder}')">
+            <span class="sel-label">Under ${game.odds.overUnder}</span>
+            <span class="sel-odds">-110</span>
+          </div>
+        </div>`;
+    }
+
+    body.innerHTML = `
+      <div class="modal-game-info">
+        <div class="vs-display">
+          <div class="vs-team">
+            <img src="${game.away.logo}" style="width:40px;height:40px;" onerror="this.style.display='none'" />
+            <span>${game.away.abbrev}</span>
+          </div>
+          <span class="vs-at">@</span>
+          <div class="vs-team">
+            <img src="${game.home.logo}" style="width:40px;height:40px;" onerror="this.style.display='none'" />
+            <span>${game.home.abbrev}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bet-type-selector">
+        <button class="${activeType === 'moneyline' ? 'active' : ''}" onclick="changeBetType('${game.id}','moneyline')">Moneyline</button>
+        <button class="${activeType === 'spread' ? 'active' : ''}" onclick="changeBetType('${game.id}','spread')">Spread</button>
+        <button class="${activeType === 'over_under' ? 'active' : ''}" onclick="changeBetType('${game.id}','over_under')">Over/Under</button>
+      </div>
+
+      ${selectionsHTML}
+
+      <div class="amount-section">
+        <label>Wager Amount</label>
+        <div class="amount-input-row">
+          <input type="number" id="betAmount" placeholder="0.00" min="1" step="1"
+                 oninput="updatePayout()" value="${currentBet.amount || ''}"/>
+        </div>
+        <div class="quick-amounts">
+          <button onclick="setAmount(10)">$10</button>
+          <button onclick="setAmount(25)">$25</button>
+          <button onclick="setAmount(50)">$50</button>
+          <button onclick="setAmount(100)">$100</button>
+          <button onclick="setAmount(250)">$250</button>
+          <button onclick="setAmount(500)">$500</button>
+        </div>
+      </div>
+
+      <div class="payout-display">
+        <span class="payout-label">Potential Payout</span>
+        <span class="payout-value" id="payoutValue">$0.00</span>
+      </div>
+
+      <button class="place-bet-btn" id="placeBetBtn" onclick="placeBet()" disabled>Place Bet</button>
+    `;
+
+    // Pre-select the clicked option
+    if (preselect) {
+      const odds = activeOdds[preselect] || -110;
+      const labels = {
+        home: `${game.home.name} ML`,
+        away: `${game.away.name} ML`,
+        over: `Over ${game.odds.overUnder}`,
+        under: `Under ${game.odds.overUnder}`
+      };
+      if (activeType === 'spread') {
+        const awaySpread = game.odds.spread >= 0 ? -game.odds.spread : Math.abs(game.odds.spread);
+        labels.home = `${game.home.abbrev} ${game.odds.spread >= 0 ? '+' + game.odds.spread : game.odds.spread}`;
+        labels.away = `${game.away.abbrev} ${awaySpread >= 0 ? '+' + awaySpread : awaySpread}`;
+      }
+      selectBet(preselect, odds, labels[preselect] || preselect);
+    }
+
+    currentBet.type = activeType;
+  }
+
+  function changeBetType(gameId, type) {
+    const game = games.find(g => g.id === gameId);
+    if (game) renderBetModalContent(game, type, null);
+  }
+
+  function selectBet(selection, odds, label) {
+    currentBet.selection = selection;
+    currentBet.odds = odds;
+    currentBet.selectionLabel = label;
+
+    document.querySelectorAll('#betModalBody .sel-btn').forEach(b => b.classList.remove('selected'));
+    event.currentTarget?.classList?.add('selected');
+    // Fallback: select by matching
+    document.querySelectorAll('#betModalBody .sel-btn').forEach(b => {
+      if (b.querySelector('.sel-label')?.textContent?.includes(label?.split(' ')[0])) {
+        // Already handled by currentTarget
+      }
+    });
+    updatePayout();
+  }
+
+  function setAmount(amt) {
+    document.getElementById('betAmount').value = amt;
+    currentBet.amount = amt;
+    updatePayout();
+  }
+
+  function updatePayout() {
+    const amt = parseFloat(document.getElementById('betAmount')?.value) || 0;
+    currentBet.amount = amt;
+    const payout = currentBet.odds && amt > 0 ? calculatePayout(amt, currentBet.odds) : 0;
+    const payoutEl = document.getElementById('payoutValue');
+    const btnEl = document.getElementById('placeBetBtn');
+    if (payoutEl) payoutEl.textContent = formatCurrency(Math.round(payout * 100) / 100);
+    if (btnEl) btnEl.disabled = !(currentBet.selection && amt > 0 && amt <= state.balance);
+  }
+
+  function closeBetModal() {
+    document.getElementById('betModal').classList.remove('open');
+  }
+
+  // ── Funds Modal ────────────────────────────────────────
+  function openFundsModal()  { document.getElementById('fundsModal').classList.add('open'); }
+  function closeFundsModal() { document.getElementById('fundsModal').classList.remove('open'); }
+
+  function addFunds(amount) {
+    state.balance = Math.round((state.balance + amount) * 100) / 100;
+    saveState();
+    closeFundsModal();
+    showToast(`Added ${formatCurrency(amount)} to your balance!`, 'success');
+    renderDashboard();
+  }
+
+  // ── Tab / Filter Navigation ────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.nav button[data-tab="${tab}"]`).classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+
+    if (tab === 'games' && games.length === 0) fetchGames();
+    if (tab === 'bets') renderBets();
+    if (tab === 'dashboard') renderDashboard();
+  }
+
+  function setGameFilter(f) {
+    gameFilter = f;
+    document.querySelectorAll('#gameFilters button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`#gameFilters button[data-filter="${f}"]`).classList.add('active');
+    renderGames();
+  }
+
+  function setBetFilter(f) {
+    betFilter = f;
+    document.querySelectorAll('#betFilters button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`#betFilters button[data-filter="${f}"]`).classList.add('active');
+    renderBets();
+  }
+
+  // ── Date Navigation ────────────────────────────────────
+  function changeDate(offset) {
+    currentDate.setDate(currentDate.getDate() + offset);
+    fetchGames();
+  }
+
+  function updateDateLabel() {
+    const today = new Date();
+    const isToday = currentDate.toDateString() === today.toDateString();
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const isTomorrow = currentDate.toDateString() === tomorrow.toDateString();
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+    const isYesterday = currentDate.toDateString() === yesterday.toDateString();
+
+    const label = currentDate.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    let tag = '';
+    if (isToday) tag = 'Today';
+    else if (isTomorrow) tag = 'Tomorrow';
+    else if (isYesterday) tag = 'Yesterday';
+
+    document.getElementById('dateLabel').innerHTML = `${label}${tag ? `<small>${tag}</small>` : ''}`;
+  }
+
+  function updateRefreshNote() {
+    const hasLive = games.some(g => g.status.state === 'in');
+    const note = document.getElementById('refreshNote');
+    if (hasLive) {
+      note.textContent = 'Auto-refreshing every 30s for live games';
+      startAutoRefresh(30000);
+    } else if (games.length > 0) {
+      note.textContent = 'Pull to refresh or click 🔄';
+      stopAutoRefresh();
+    } else {
+      note.textContent = '';
+      stopAutoRefresh();
+    }
+  }
+
+  // ── Auto Refresh ───────────────────────────────────────
+  function startAutoRefresh(interval) {
+    stopAutoRefresh();
+    autoRefreshId = setInterval(() => fetchGames(), interval);
+  }
+
+  function stopAutoRefresh() {
+    if (autoRefreshId) { clearInterval(autoRefreshId); autoRefreshId = null; }
+  }
+
+  function refreshGames() { fetchGames(); showToast('Games refreshed!', 'info'); }
+
+  // ── Toast Notifications ────────────────────────────────
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('removing');
+      toast.addEventListener('animationend', () => toast.remove());
+    }, 3500);
+  }
+
+  // ── Utilities ──────────────────────────────────────────
+  function formatCurrency(n) {
+    return '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // Close modals with Escape or clicking overlay
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeBetModal(); closeFundsModal(); } });
+  document.getElementById('betModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeBetModal(); });
+  document.getElementById('fundsModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeFundsModal(); });
+
+  // ── Initialize ─────────────────────────────────────────
+  (function init() {
+    updateBalanceDisplay();
+    renderDashboard();
+    fetchGames();
+    switchTab('games');
+  })();
+  </script>
+</body>
+</html>
